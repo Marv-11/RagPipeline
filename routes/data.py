@@ -1,0 +1,57 @@
+from fastapi import APIRouter, Depends, UploadFile, File, status
+from fastapi.responses import JSONResponse
+from helpers.config import get_settings, Settings
+from controllers import DataController, ProjectController
+from model import ResponseStatus
+import os
+import aiofiles
+import logging
+
+logger = logging.getLogger('uvicorn.error')
+
+data_router = APIRouter(
+    prefix="/api/v1/data",
+    tags=["api_v1", "data"]
+)
+
+@data_router.post("/upload/{project_id}")
+async def upload_data(
+    project_id: str,
+    file: UploadFile = File(...),
+    app_Settings: Settings = Depends(get_settings),
+):
+    data_controller = DataController()
+    is_valid, response_status = data_controller.validate_file(file=file)
+    
+    if not is_valid:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "message": response_status.value
+            }
+        )
+
+    project_dir = ProjectController().get_project_path(project_id=project_id)
+    file_path = data_controller.generate_unique_filename(project_id=project_id, filename=file.filename)
+
+    try:
+        async with aiofiles.open(file_path, 'wb') as out_file:
+            while chunk := await file.read(app_Settings.FILE_DEFAULT_CHUNK_SIZE):
+                await out_file.write(chunk)
+    except Exception as e:
+        logger.error(f"Error uploading file: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "message": ResponseStatus.FILE_UPLOAD_FAILED.value,
+                "error": str(e)
+            }
+        )
+    
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "message": ResponseStatus.FILE_UPLOADED_SUCCESS.value, 
+        }
+    )
+        
