@@ -24,11 +24,11 @@ class DataController(BaseController):
         clean_filename = self.get_clean_filename(filename = filename)
         new_filepath = os.path.join(project_path, f"{random_string}_{clean_filename}")
 
-        while os.path.exists(new_filepath):
+        while os.path.exists(clean_filename):
             random_string = self.generate_random_string()
             new_filepath = os.path.join(project_path, f"{random_string}_{clean_filename}")
         
-        return new_filepath
+        return new_filepath, f"{random_string}_{clean_filename}"
 
     def get_clean_filename(self, filename: str):
         # Remove any special characters from the filename to ensure it's safe for storage
