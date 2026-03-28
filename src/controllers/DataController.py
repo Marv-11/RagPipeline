@@ -37,6 +37,3 @@ class DataController(BaseController):
         cleaned_file_name = clean_file_name.replace(" ", "_")  
         return cleaned_file_name
 
-    def process_file(self, file):
-        # Implement file processing logic here
-        pass
